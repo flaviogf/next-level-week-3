@@ -1,9 +1,10 @@
-import React, { FormEvent, useState } from "react";
+import React, { ChangeEvent, FormEvent, useState } from "react";
+import { useHistory } from "react-router-dom";
 import { Map, Marker, TileLayer } from "react-leaflet";
 import L, { LeafletMouseEvent } from "leaflet";
 import { FiPlus } from "react-icons/fi";
 import { Sidebar } from "../components/Sidebar";
-
+import { api } from "../services/api";
 import mapMarkerImg from "../images/map-marker.svg";
 
 import "../styles/pages/create-orphanage.css";
@@ -16,6 +17,8 @@ const happyMapIcon = L.icon({
 });
 
 export function CreateOrphanage() {
+  const history = useHistory();
+
   const [position, setPosition] = useState({ latitude: 0, longitude: 0 });
 
   const [name, setName] = useState("");
@@ -23,6 +26,8 @@ export function CreateOrphanage() {
   const [instructions, setInstructions] = useState("");
   const [opening_hours, setOpeningHours] = useState("");
   const [open_on_weekends, setOpenOnWeekends] = useState(true);
+  const [images, setImages] = useState<File[]>([]);
+  const [previewImages, setPreviewImages] = useState<string[]>([]);
 
   function onMapClick(event: LeafletMouseEvent) {
     const { lat: latitude, lng: longitude } = event.latlng;
@@ -30,22 +35,44 @@ export function CreateOrphanage() {
     setPosition({ latitude, longitude });
   }
 
-  function onSubmit(event: FormEvent) {
+  async function onSubmit(event: FormEvent) {
     event.preventDefault();
 
     const { latitude, longitude } = position;
 
-    const orphanage = {
-      name,
-      latitude,
-      longitude,
-      about,
-      instructions,
-      opening_hours,
-      open_on_weekends,
-    };
+    const data = new FormData();
 
-    console.log(orphanage);
+    data.append("name", name);
+    data.append("about", about);
+    data.append("latitude", String(latitude));
+    data.append("longitude", String(longitude));
+    data.append("instructions", instructions);
+    data.append("opening_hours", opening_hours);
+    data.append("open_on_weekends", String(open_on_weekends));
+
+    images.forEach((it) => data.append("images", it));
+
+    await api.post("/orphanages", data);
+
+    alert("Cadastro realizado com sucesso");
+
+    history.push("/app");
+  }
+
+  function selectImages(event: ChangeEvent<HTMLInputElement>) {
+    const { files } = event.target;
+
+    if (!files) {
+      return;
+    }
+
+    const images = Array.from(files);
+
+    setImages(images);
+
+    const previewImages = images.map((it) => URL.createObjectURL(it));
+
+    setPreviewImages(previewImages);
   }
 
   return (
@@ -97,11 +124,22 @@ export function CreateOrphanage() {
             <div className="input-block">
               <label htmlFor="images">Fotos</label>
 
-              <div className="uploaded-image"></div>
+              <div className="images-container">
+                {previewImages.map((it) => (
+                  <img alt={name} key={it} src={it} />
+                ))}
 
-              <button className="new-image" type="button">
-                <FiPlus size={24} color="#15b6d6" />
-              </button>
+                <label htmlFor="image[]" className="new-image">
+                  <FiPlus size={24} color="#15b6d6" />
+                </label>
+              </div>
+
+              <input
+                multiple
+                id="image[]"
+                type="file"
+                onChange={selectImages}
+              />
             </div>
           </fieldset>
 
@@ -156,5 +194,3 @@ export function CreateOrphanage() {
     </div>
   );
 }
-
-// return `https://a.tile.openstreetmap.org/${z}/${x}/${y}.png`;
