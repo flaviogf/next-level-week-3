@@ -6,7 +6,7 @@ export const ImageView = {
   },
   render(image: Image) {
     return {
-      url: `http://localhost:3333/uploads/${image.path}`,
+      url: `http://192.168.100.51:3333/uploads/${image.path}`,
     };
   },
 };
